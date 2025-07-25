@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polygon Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .game-container {
+            background-color: #ffffff; /* White card background */
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 900px;
+            width: 100%;
+        }
+        canvas {
+            background-color: #e2e8f0; /* Light blue-gray canvas background */
+            border-radius: 10px;
+            display: block;
+            margin-bottom: 20px;
+            border: 1px solid #cbd5e1; /* Light border */
+        }
+        .player-info {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+        .player-card {
+            background-color: #f8fafc;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            flex: 1;
+            min-width: 280px;
+        }
+        .color-palette button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .color-palette button:hover {
+            transform: scale(1.1);
+        }
+        .color-palette button.selected {
+            border-color: #3b82f6; /* Blue border for selected color */
+            transform: scale(1.1);
+        }
+        .action-buttons button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background-color 0.2s, transform 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+        .action-buttons button:hover {
+            transform: translateY(-2px);
+        }
+        .action-buttons button:active {
+            transform: translateY(0);
+        }
+        .confirm-btn {
+            background-color: #22c55e; /* Green */
+            color: white;
+        }
+        .confirm-btn:hover {
+            background-color: #16a34a;
+        }
+        .reset-btn {
+            background-color: #ef4444; /* Red */
+            color: white;
+        }
+        .reset-btn:hover {
+            background-color: #dc2626;
+        }
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            z-index: 1000;
+            display: none; /* Hidden by default */
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        .message-box button {
+            background-color: #3b82f6;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background-color 0.2s;
+        }
+        .message-box button:hover {
+            background-color: #2563eb;
+        }
+        .current-player-indicator {
+            font-weight: bold;
+            color: #3b82f6;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Polygon Game</h1>
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+        <div class="player-info">
+            <div id="player1Card" class="player-card">
+                <h2 class="text-xl font-semibold text-gray-700 mb-3">Player 1</h2>
+                <p class="text-gray-600 mb-2">Current Position: <span id="player1Pos">Outer Ring, Vertex 6</span></p>
+                <p class="text-gray-600 mb-2">Chosen Color: <span id="player1ColorDisplay" class="font-bold">None</span></p>
+                <p class="text-gray-600 mb-2">Selected Move: <span id="player1MoveDisplay" class="font-bold">None</span></p>
+                <div class="color-palette flex gap-2 mb-4">
+                    <button class="bg-red-500" data-color="Red" onclick="selectColor(1, 'Red')"></button>
+                    <button class="bg-amber-800" data-color="Brown" onclick="selectColor(1, 'Brown')"></button>
+                    <button class="bg-blue-300" data-color="Light Blue" onclick="selectColor(1, 'Light Blue')"></button>
+                    <button class="bg-white border border-gray-300" data-color="White" onclick="selectColor(1, 'White')"></button>
+                    <button class="bg-yellow-400" data-color="Yellow" onclick="selectColor(1, 'Yellow')"></button>
+                    <button class="bg-blue-800" data-color="Dark Blue" onclick="selectColor(1, 'Dark Blue')"></button>
+                </div>
+                <div class="action-buttons flex gap-3">
+                    <button class="confirm-btn" onclick="confirmMove(1)">Confirm Move</button>
+                </div>
+            </div>
+
+            <div id="player2Card" class="player-card">
+                <h2 class="text-xl font-semibold text-gray-700 mb-3">Player 2</h2>
+                <p class="text-gray-600 mb-2">Current Position: <span id="player2Pos">Outer Ring, Vertex 2</span></p>
+                <p class="text-gray-600 mb-2">Chosen Color: <span id="player2ColorDisplay" class="font-bold">None</span></p>
+                <p class="text-gray-600 mb-2">Selected Move: <span id="player2MoveDisplay" class="font-bold">None</span></p>
+                <div class="color-palette flex gap-2 mb-4">
+                    <button class="bg-red-500" data-color="Red" onclick="selectColor(2, 'Red')"></button>
+                    <button class="bg-amber-800" data-color="Brown" onclick="selectColor(2, 'Brown')"></button>
+                    <button class="bg-blue-300" data-color="Light Blue" onclick="selectColor(2, 'Light Blue')"></button>
+                    <button class="bg-white border border-gray-300" data-color="White" onclick="selectColor(2, 'White')"></button>
+                    <button class="bg-yellow-400" data-color="Yellow" onclick="selectColor(2, 'Yellow')"></button>
+                    <button class="bg-blue-800" data-color="Dark Blue" onclick="selectColor(2, 'Dark Blue')"></button>
+                </div>
+                <div class="action-buttons flex gap-3">
+                    <button class="confirm-btn" onclick="confirmMove(2)">Confirm Move</button>
+                </div>
+            </div>
+        </div>
+        <div class="action-buttons flex gap-3 mt-4">
+            <button class="reset-btn" onclick="resetGameConfirmation()">Reset Game</button>
+        </div>
+        <div id="currentPlayerIndicator" class="current-player-indicator">Player 1's Turn to Select Color and Move</div>
+    </div>
+
+    <div id="messageBox" class="message-box">
+        <p id="messageText"></p>
+        <button onclick="hideMessageBox()">OK</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const outerRadius = 250;
+        const middleRadius = 150;
+        const innerRadius = 70;
+        const vertexSize = 10; // Radius of the clickable vertex circle
+
+        // Game state
+        let players = {
+            1: {
+                currentPolygon: 0, // 0: Octagon, 1: Hexagon, 2: Square
+                currentVertexIndex: 6, // Leftmost for player 1 on Octagon
+                selectedColor: null,
+                selectedMove: null, // { polygon: 0|1|2, vertexIndex: N }
+                hasConfirmed: false,
+                tokenColor: 'red' // Default token color for drawing
+            },
+            2: {
+                currentPolygon: 0,
+                currentVertexIndex: 2, // Rightmost for player 2 on Octagon
+                selectedColor: null,
+                selectedMove: null,
+                hasConfirmed: false,
+                tokenColor: 'blue' // Default token color for drawing
+            }
+        };
+
+        // Array to store dynamically created edges
+        let dynamicEdges = [];
+
+        // Define polygons and their vertices
+        // Each polygon is an array of vertex coordinates {x, y}
+        let polygons = [];
+
+        // Function to generate vertices for a regular polygon
+        function generatePolygonVertices(numSides, radius, center_x, center_y, startAngleOffset = 0) {
+            const vertices = [];
+            for (let i = 0; i < numSides; i++) {
+                const angle = startAngleOffset + (i * 2 * Math.PI) / numSides;
+                const x = center_x + radius * Math.cos(angle);
+                const y = center_y + radius * Math.sin(angle);
+                vertices.push({ x, y });
+            }
+            return vertices;
+        }
+
+        function initializePolygons() {
+            // Octagon (8 sides) - start top-left for leftmost (index 6) and top-right for rightmost (index 2)
+            // Angle offset: Math.PI / 2 makes top vertex at 12 o'clock.
+            // For leftmost/rightmost, we need to adjust.
+            // 0: top, 1: top-right, 2: rightmost, 3: bottom-right, 4: bottom, 5: bottom-left, 6: leftmost, 7: top-left
+            polygons[0] = generatePolygonVertices(8, outerRadius, centerX, centerY, -Math.PI / 2 + Math.PI / 8); // Offset to align vertices
+            // Hexagon (6 sides) - start top
+            polygons[1] = generatePolygonVertices(6, middleRadius, centerX, centerY, -Math.PI / 2);
+            // Square (4 sides) - start top
+            polygons[2] = generatePolygonVertices(4, innerRadius, centerX, centerY, -Math.PI / 2 + Math.PI / 4); // Offset for diamond shape
+
+            // Adjust player starting positions based on the generated vertices
+            // Player 1: Leftmost on Octagon (index 6)
+            // Player 2: Rightmost on Octagon (index 2)
+            players[1].currentPolygon = 0;
+            players[1].currentVertexIndex = 6;
+            players[2].currentPolygon = 0;
+            players[2].currentVertexIndex = 2;
+        }
+
+        // --- Drawing Functions ---
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw polygons
+            polygons.forEach((polygonVertices, polyIndex) => {
+                ctx.beginPath();
+                polygonVertices.forEach((vertex, index) => {
+                    if (index === 0) {
+                        ctx.moveTo(vertex.x, vertex.y);
+                    } else {
+                        ctx.lineTo(vertex.x, vertex.y);
+                    }
+                });
+                ctx.closePath();
+                ctx.strokeStyle = '#475569'; // Slate gray
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw vertices as small circles
+                polygonVertices.forEach(vertex => {
+                    ctx.beginPath();
+                    ctx.arc(vertex.x, vertex.y, vertexSize / 2, 0, Math.PI * 2);
+                    ctx.fillStyle = '#64748b'; // Darker slate gray
+                    ctx.fill();
+                    ctx.strokeStyle = '#334155'; // Even darker
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                });
+            });
+
+            // Draw dynamic edges
+            dynamicEdges.forEach(edge => {
+                ctx.beginPath();
+                ctx.moveTo(edge.x1, edge.y1);
+                ctx.lineTo(edge.x2, edge.y2);
+                ctx.strokeStyle = '#f97316'; // Orange color for new edges
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            });
+
+            // Draw player tokens
+            for (let pId in players) {
+                const player = players[pId];
+                const currentPoly = polygons[player.currentPolygon];
+                if (currentPoly && currentPoly[player.currentVertexIndex]) {
+                    const pos = currentPoly[player.currentVertexIndex];
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, vertexSize * 0.8, 0, Math.PI * 2); // Slightly larger than vertex
+                    ctx.fillStyle = player.tokenColor;
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 2;
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Add player number text
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 12px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(pId, pos.x, pos.y);
+                }
+            }
+        }
+
+        // --- Geometric Helper Functions for Line-of-Sight ---
+
+        // Given three collinear points p, q, r, the function checks if
+        // point q lies on segment pr
+        function onSegment(p, q, r) {
+            return (q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
+                    q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y));
+        }
+
+        // To find orientation of ordered triplet (p, q, r).
+        // The function returns following values
+        // 0 --> p, q and r are collinear
+        // 1 --> Clockwise
+        // 2 --> Counterclockwise
+        function orientation(p, q, r) {
+            let val = (q.y - p.y) * (r.x - q.x) -
+                      (q.x - p.x) * (r.y - q.y);
+
+            if (val === 0) return 0;  // collinear
+            return (val > 0) ? 1 : 2; // clock or counterclock wise
+        }
+
+        // The main function that returns true if line segment 'p1q1'
+        // and 'p2q2' intersect. It handles general and special (collinear) cases.
+        // This function is designed to detect if segments *cross* or *overlap*,
+        // not just if they touch at an endpoint.
+        function doIntersect(p1, q1, p2, q2) {
+            // Find the four orientations needed for general and special cases
+            let o1 = orientation(p1, q1, p2);
+            let o2 = orientation(p1, q1, q2);
+            let o3 = orientation(p2, q2, p1);
+            let o4 = orientation(p2, q2, q1);
+
+            // General case
+            if (o1 !== 0 && o2 !== 0 && o3 !== 0 && o4 !== 0 && o1 !== o2 && o3 !== o4) {
+                return true;
+            }
+
+            // Special Cases (Collinear cases)
+            // p1, q1 and p2 are collinear and p2 lies on segment p1q1
+            if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+
+            // p1, q1 and q2 are collinear and q2 lies on segment p1q1
+            if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+
+            // p2, q2 and p1 are collinear and p1 lies on segment p2q2
+            if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+
+            // p2, q2 and q1 are collinear and q1 lies on segment p2q2
+            if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+
+            return false; // Doesn't fall in any of the above cases
+        }
+
+
+        // --- Graph and Pathfinding Functions ---
+
+        // Helper to get a unique string ID for a vertex
+        function getVertexId(polyIndex, vertexIndex) {
+            return `${polyIndex}-${vertexIndex}`;
+        }
+
+        // Helper to parse a vertex ID back to indices
+        function parseVertexId(id) {
+            const parts = id.split('-');
+            return { polygon: parseInt(parts[0]), vertexIndex: parseInt(parts[1]) };
+        }
+
+        // Builds the adjacency list graph based on current polygons and dynamic edges
+        function buildGraph() {
+            const graph = {};
+
+            // Add all vertices to the graph initially
+            polygons.forEach((polyVertices, polyIndex) => {
+                polyVertices.forEach((vertex, vertexIndex) => {
+                    const id = getVertexId(polyIndex, vertexIndex);
+                    graph[id] = [];
+                });
+            });
+
+            // Add original polygon edges
+            polygons.forEach((polyVertices, polyIndex) => {
+                const numVertices = polyVertices.length;
+                for (let i = 0; i < numVertices; i++) {
+                    const currentId = getVertexId(polyIndex, i);
+                    const nextId = getVertexId(polyIndex, (i + 1) % numVertices);
+                    const prevId = getVertexId(polyIndex, (i - 1 + numVertices) % numVertices);
+
+                    // Add bidirectional connections
+                    graph[currentId].push(nextId);
+                    graph[currentId].push(prevId);
+                }
+            });
+
+            // Add dynamic edges (bidirectional)
+            dynamicEdges.forEach(edge => {
+                const startId = getVertexId(edge.startPoly, edge.startVertex);
+                const endId = getVertexId(edge.endPoly, edge.endVertex);
+
+                // Ensure the nodes exist in the graph before adding connections
+                if (graph[startId] && graph[endId]) {
+                    // Add connection only if it doesn't already exist to avoid duplicates
+                    if (!graph[startId].includes(endId)) {
+                        graph[startId].push(endId);
+                    }
+                    if (!graph[endId].includes(startId)) {
+                        graph[endId].push(startId);
+                    }
+                }
+            });
+
+            return graph;
+        }
+
+        // Breadth-First Search to find shortest path distance
+        function bfs(graph, startId, endId, maxDistance) {
+            if (startId === endId) return 0; // Already at the target
+
+            const queue = [{ nodeId: startId, distance: 0 }];
+            const visited = new Set();
+            visited.add(startId);
+
+            let head = 0;
+            while (head < queue.length) {
+                const { nodeId, distance } = queue[head++];
+
+                // Optimization: if we've already reached or exceeded maxDistance, stop exploring this path
+                if (distance >= maxDistance && nodeId !== endId) continue;
+
+                const neighbors = graph[nodeId];
+                if (neighbors) {
+                    for (const neighborId of neighbors) {
+                        if (neighborId === endId) {
+                            return distance + 1; // Found target
+                        }
+                        if (!visited.has(neighborId)) {
+                            visited.add(neighborId);
+                            queue.push({ nodeId: neighborId, distance: distance + 1 });
+                        }
+                    }
+                }
+            }
+            return -1; // Not reachable within maxDistance or at all
+        }
+
+
+        // --- Main Game Logic Functions ---
+
+        function getDistance(x1, y1, x2, y2) {
+            return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        }
+
+        function getClickedVertex(event) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (event.clientX - rect.left) * scaleX;
+            const mouseY = (event.clientY - rect.top) * scaleY;
+
+            for (let pIdx = 0; pIdx < polygons.length; pIdx++) {
+                const polygonVertices = polygons[pIdx];
+                for (let vIdx = 0; vIdx < polygonVertices.length; vIdx++) {
+                    const vertex = polygonVertices[vIdx];
+                    if (getDistance(mouseX, mouseY, vertex.x, vertex.y) < vertexSize) {
+                        return { polygon: pIdx, vertexIndex: vIdx };
+                    }
+                }
+            }
+            return null;
+        }
+
+        function isValidMove(player, target) {
+            const currentPoly = player.currentPolygon;
+            const currentVertex = player.currentVertexIndex;
+            const targetPoly = target.polygon;
+            const targetVertex = target.vertexIndex;
+
+            // Rule 1: Disallow staying on the same spot
+            if (currentPoly === targetPoly && currentVertex === targetVertex) {
+                return false;
+            }
+
+            const startPointCoords = polygons[currentPoly][currentVertex];
+            const endPointCoords = polygons[targetPoly][targetVertex];
+
+            // Case A: Move within the same polygon OR a jump between non-adjacent polygons
+            // This case uses the BFS on the *current* graph.
+            if (currentPoly === targetPoly || Math.abs(currentPoly - targetPoly) > 1) {
+                const gameGraph = buildGraph(); // Build graph with all existing edges
+                const startId = getVertexId(currentPoly, currentVertex);
+                const endId = getVertexId(targetPoly, targetVertex);
+                const distance = bfs(gameGraph, startId, endId, 2); // Max 2 moves
+                return distance !== -1 && distance <= 2;
+            }
+
+            // Case B: Potential NEW Cross-polygon move (between adjacent polygons)
+            // This requires a line-of-sight check. If valid, it's a 1-move jump.
+            if (Math.abs(currentPoly - targetPoly) === 1) {
+                // Perform geometric line-of-sight checks for this *new* potential cross-polygon edge
+                // Step 1: Check if the proposed line segment passes *through* any *other* vertex
+                for (let pIdx = 0; pIdx < polygons.length; pIdx++) {
+                    const polygonVertices = polygons[pIdx];
+                    for (let i = 0; i < polygonVertices.length; i++) {
+                        const vertexToCheck = polygonVertices[i];
+                        // Skip if the vertex to check is one of the proposed move's endpoints
+                        if ((vertexToCheck.x === startPointCoords.x && vertexToCheck.y === startPointCoords.y) ||
+                            (vertexToCheck.x === endPointCoords.x && vertexToCheck.y === endPointCoords.y)) {
+                            continue;
+                        }
+                        // Check if this other vertex lies on the proposed segment
+                        if (orientation(startPointCoords, vertexToCheck, endPointCoords) === 0 && onSegment(startPointCoords, vertexToCheck, endPointCoords)) {
+                            return false; // Path blocked by another vertex
+                        }
+                    }
+                }
+
+                // Step 2: Check for intersections with existing polygon edges
+                for (let pIdx = 0; pIdx < polygons.length; pIdx++) {
+                    const polygonVertices = polygons[pIdx];
+                    for (let i = 0; i < polygonVertices.length; i++) {
+                        const p1 = polygonVertices[i]; // Start of existing edge
+                        const q1 = polygonVertices[(i + 1) % polygonVertices.length]; // End of existing edge
+
+                        // Skip if the existing edge shares an endpoint with the proposed move.
+                        // This prevents false positives when lines meet at a vertex.
+                        const sharesStartWithP1 = (startPointCoords.x === p1.x && startPointCoords.y === p1.y);
+                        const sharesStartWithQ1 = (startPointCoords.x === q1.x && startPointCoords.y === q1.y);
+                        const sharesEndWithP1 = (endPointCoords.x === p1.x && endPointCoords.y === p1.y);
+                        const sharesEndWithQ1 = (endPointCoords.x === q1.x && endPointCoords.y === q1.y);
+
+                        // If the proposed segment is identical to an existing edge, or shares both endpoints, skip.
+                        if ((sharesStartWithP1 && sharesEndWithP1) || (sharesStartWithQ1 && sharesEndWithQ1) ||
+                            (sharesStartWithP1 && sharesEndWithQ1) || (sharesStartWithQ1 && sharesEndWithP1)) {
+                            continue;
+                        }
+                        // If the proposed segment shares only one endpoint with an existing edge, skip.
+                        if (sharesStartWithP1 || sharesStartWithQ1 || sharesEndWithP1 || sharesEndWithQ1) {
+                            continue;
+                        }
+
+                        // Now, check for intersection with edges that do not share endpoints with the proposed move
+                        if (doIntersect(startPointCoords, endPointCoords, p1, q1)) {
+                            return false; // Intersection found with an existing polygon edge
+                        }
+                    }
+                }
+
+                // Step 3: Check for intersections with existing dynamic edges
+                for (const edge of dynamicEdges) {
+                    const p1 = polygons[edge.startPoly][edge.startVertex];
+                    const q1 = polygons[edge.endPoly][edge.endVertex];
+
+                    // Apply the same endpoint skipping logic for dynamic edges
+                    const sharesStartWithP1 = (startPointCoords.x === p1.x && startPointCoords.y === p1.y);
+                    const sharesStartWithQ1 = (startPointCoords.x === q1.x && startPointCoords.y === q1.y);
+                    const sharesEndWithP1 = (endPointCoords.x === p1.x && endPointCoords.y === p1.y);
+                    const sharesEndWithQ1 = (endPointCoords.x === q1.x && endPointCoords.y === q1.y);
+
+                    // If the proposed segment is identical to an existing dynamic edge, or shares both endpoints, skip.
+                    if ((sharesStartWithP1 && sharesEndWithP1) || (sharesStartWithQ1 && sharesEndWithQ1) ||
+                        (sharesStartWithP1 && sharesEndWithQ1) || (sharesStartWithQ1 && sharesEndWithP1)) {
+                        continue;
+                    }
+                    // If the proposed segment shares only one endpoint with an existing dynamic edge, skip.
+                    if (sharesStartWithP1 || sharesStartWithQ1 || sharesEndWithP1 || sharesEndWithQ1) {
+                        continue;
+                    }
+
+                    if (doIntersect(startPointCoords, endPointCoords, p1, q1)) {
+                        return false; // Intersection found with a dynamic edge
+                    }
+                }
+
+                // If all line-of-sight checks pass for a cross-polygon move, it's a valid 1-move jump.
+                return true;
+            }
+
+            // This should ideally not be reached if the above conditions cover all valid cases.
+            return false;
+        }
+
+
+        let currentPlayerTurn = 1; // 1 or 2
+        let player1Confirmed = false; // Global flag for Player 1's confirmation status
+        let player2Confirmed = false; // Global flag for Player 2's confirmation status
+
+        function updateCurrentPlayerIndicator() {
+            const indicator = document.getElementById('currentPlayerIndicator');
+            if (!player1Confirmed && !player2Confirmed) {
+                indicator.textContent = `Player ${currentPlayerTurn}'s Turn to Select Color and Move`;
+            } else if (player1Confirmed && !player2Confirmed) {
+                indicator.textContent = `Player 2: Confirm your move!`;
+            } else if (!player1Confirmed && player2Confirmed) {
+                indicator.textContent = `Player 1: Confirm your move!`;
+            } else {
+                indicator.textContent = `Both players have confirmed! Click "OK" to execute round.`;
+            }
+        }
+
+        function showMessageBox(message, callback = null) {
+            const msgBox = document.getElementById('messageBox');
+            document.getElementById('messageText').textContent = message;
+            msgBox.style.display = 'block';
+            if (callback) {
+                document.querySelector('#messageBox button').onclick = () => {
+                    hideMessageBox();
+                    callback();
+                };
+            } else {
+                document.querySelector('#messageBox button').onclick = hideMessageBox;
+            }
+        }
+
+        function hideMessageBox() {
+            document.getElementById('messageBox').style.display = 'none';
+            document.querySelector('#messageBox button').onclick = hideMessageBox; // Reset to default
+        }
+
+
+        function selectColor(playerNum, color) {
+            const player = players[playerNum];
+            // Only allow color selection for the current player whose turn it is
+            if (playerNum !== currentPlayerTurn || player.hasConfirmed) {
+                showMessageBox(`It's not Player ${playerNum}'s turn to select a color, or they've already confirmed.`);
+                return;
+            }
+
+            player.selectedColor = color;
+            document.getElementById(`player${playerNum}ColorDisplay`).textContent = color;
+
+            // Update token color for drawing
+            player.tokenColor = color.toLowerCase().replace(' ', '-');
+            if (player.tokenColor === 'light-blue') player.tokenColor = '#93c5fd'; // Tailwind blue-300
+            if (player.tokenColor === 'brown') player.tokenColor = '#92400e'; // Tailwind amber-800
+            if (player.tokenColor === 'white') player.tokenColor = '#ffffff'; // White
+            if (player.tokenColor === 'red') player.tokenColor = '#ef4444'; // Red-500
+            if (player.tokenColor === 'yellow') player.tokenColor = '#facc15'; // Yellow-400
+            if (player.tokenColor === 'dark-blue') player.tokenColor = '#1e40af'; // Blue-800
+
+            // Remove selected class from all buttons for this player
+            document.querySelectorAll(`#player${playerNum}Card .color-palette button`).forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            // Add selected class to the clicked button
+            document.querySelector(`#player${playerNum}Card .color-palette button[data-color="${color}"]`).classList.add('selected');
+
+            drawBoard(); // Redraw with new token color
+            updateCurrentPlayerIndicator();
+        }
+
+        canvas.addEventListener('click', (event) => {
+            const clickedVertex = getClickedVertex(event);
+            if (!clickedVertex) return;
+
+            const activePlayer = players[currentPlayerTurn]; // This is the player whose turn it is to select a move
+
+            // If the active player has already confirmed their move, they cannot select another.
+            if (activePlayer.hasConfirmed) {
+                showMessageBox(`Player ${currentPlayerTurn} has already confirmed their move for this round. Waiting for other player.`);
+                return;
+            }
+
+            // Validate the move for the active player
+            if (isValidMove(activePlayer, clickedVertex)) {
+                activePlayer.selectedMove = clickedVertex;
+                const polyName = ['Outer Ring', 'Middle Hexagon', 'Inner Square'][clickedVertex.polygon];
+                document.getElementById(`player${currentPlayerTurn}MoveDisplay`).textContent = `${polyName}, Vertex ${clickedVertex.vertexIndex}`;
+                showMessageBox(`Player ${currentPlayerTurn}: Move selected to ${polyName}, Vertex ${clickedVertex.vertexIndex}. Click Confirm Move.`);
+            } else {
+                showMessageBox(`Invalid move for Player ${currentPlayerTurn}. Please select a different vertex. Ensure the path is within 2 moves and does not cross any existing lines or vertices if it's a cross-polygon jump.`);
+                activePlayer.selectedMove = null; // Clear invalid selection
+                document.getElementById(`player${currentPlayerTurn}MoveDisplay`).textContent = `None`;
+            }
+        });
+
+        function confirmMove(playerNum) {
+            const player = players[playerNum];
+            // Only allow confirmation for the current player whose turn it is
+            if (playerNum !== currentPlayerTurn) {
+                showMessageBox(`It's not Player ${playerNum}'s turn to confirm.`);
+                return;
+            }
+
+            if (!player.selectedColor) {
+                showMessageBox(`Player ${playerNum}: Please select a color first.`);
+                return;
+            }
+            if (!player.selectedMove) {
+                showMessageBox(`Player ${playerNum}: Please select a vertex to move to.`);
+                return;
+            }
+
+            player.hasConfirmed = true;
+            if (playerNum === 1) player1Confirmed = true;
+            else player2Confirmed = true;
+
+            document.querySelector(`#player${playerNum}Card .action-buttons .confirm-btn`).disabled = true; // Disable button after confirmation
+            showMessageBox(`Player ${playerNum} has confirmed their move!`);
+
+            if (player1Confirmed && player2Confirmed) {
+                showMessageBox("Both players have confirmed their moves. Click OK to execute the round!", executeRound);
+            } else {
+                // Switch turn for selection to the other player
+                currentPlayerTurn = (playerNum === 1) ? 2 : 1;
+                updateCurrentPlayerIndicator();
+            }
+        }
+
+        function executeRound() {
+            // Store starting positions for drawing dynamic edges
+            const player1StartPoly = players[1].currentPolygon;
+            const player1StartVertexIndex = players[1].currentVertexIndex;
+            const player2StartPoly = players[2].currentPolygon;
+            const player2StartVertexIndex = players[2].currentVertexIndex;
+
+            // Move players to their selected positions
+            players[1].currentPolygon = players[1].selectedMove.polygon;
+            players[1].currentVertexIndex = players[1].selectedMove.vertexIndex;
+            players[2].currentPolygon = players[2].selectedMove.polygon;
+            players[2].currentVertexIndex = players[2].selectedMove.vertexIndex;
+
+            // Add dynamic edges if cross-polygon move occurred
+            // Only add if it was a new cross-polygon move (not moving within same poly or along existing path)
+            const isPlayer1CrossPolygon = (player1StartPoly !== players[1].currentPolygon && Math.abs(player1StartPoly - players[1].currentPolygon) === 1);
+            const isPlayer2CrossPolygon = (player2StartPoly !== players[2].currentPolygon && Math.abs(player2StartPoly - players[2].currentPolygon) === 1);
+
+            if (isPlayer1CrossPolygon) {
+                const startVertex = polygons[player1StartPoly][player1StartVertexIndex];
+                const endVertex = polygons[players[1].currentPolygon][players[1].currentVertexIndex];
+                dynamicEdges.push({
+                    x1: startVertex.x, y1: startVertex.y,
+                    x2: endVertex.x, y2: endVertex.y,
+                    startPoly: player1StartPoly, startVertex: player1StartVertexIndex,
+                    endPoly: players[1].currentPolygon, endVertex: players[1].currentVertexIndex
+                });
+            }
+
+            if (isPlayer2CrossPolygon) {
+                const startVertex = polygons[player2StartPoly][player2StartVertexIndex];
+                const endVertex = polygons[players[2].currentPolygon][players[2].currentVertexIndex];
+                dynamicEdges.push({
+                    x1: startVertex.x, y1: startVertex.y,
+                    x2: endVertex.x, y2: endVertex.y,
+                    startPoly: player2StartPoly, startVertex: player2StartVertexIndex,
+                    endPoly: players[2].currentPolygon, endVertex: players[2].currentVertexIndex
+                });
+            }
+
+
+            // Update UI with new positions
+            const p1PolyName = ['Outer Ring', 'Middle Hexagon', 'Inner Square'][players[1].currentPolygon];
+            const p2PolyName = ['Outer Ring', 'Middle Hexagon', 'Inner Square'][players[2].currentPolygon];
+            document.getElementById('player1Pos').textContent = `${p1PolyName}, Vertex ${players[1].currentVertexIndex}`;
+            document.getElementById('player2Pos').textContent = `${p2PolyName}, Vertex ${players[2].currentVertexIndex}`;
+
+            drawBoard(); // Redraw board with new positions and dynamic edges
+
+            // Check for game end condition
+            if (players[1].currentPolygon === players[2].currentPolygon &&
+                players[1].currentVertexIndex === players[2].currentVertexIndex) {
+                showMessageBox("Game Over! Both players landed on the same vertex!", () => {
+                    // This callback will be executed when the user clicks OK on the message box
+                    performGameReset();
+                });
+            } else {
+                showMessageBox("Round executed! Tokens moved. Starting next round.", startNewRound);
+            }
+        }
+
+        // New function to handle the actual game reset logic
+        function performGameReset() {
+            initializePolygons(); // Re-initialize polygon vertices and player starting positions
+            players[1].selectedColor = null;
+            players[1].selectedMove = null;
+            players[1].hasConfirmed = false;
+            players[1].tokenColor = 'red'; // Reset token color
+            players[2].selectedColor = null;
+            players[2].selectedMove = null;
+            players[2].hasConfirmed = false;
+            players[2].tokenColor = 'blue'; // Reset token color
+
+            dynamicEdges = []; // Clear all dynamic edges on reset
+
+            // Reset global confirmation flags
+            player1Confirmed = false;
+            player2Confirmed = false;
+
+            document.getElementById('player1Pos').textContent = `Outer Ring, Vertex ${players[1].currentVertexIndex}`;
+            document.getElementById('player2Pos').textContent = `Outer Ring, Vertex ${players[2].currentVertexIndex}`;
+            document.getElementById('player1ColorDisplay').textContent = 'None';
+            document.getElementById('player2ColorDisplay').textContent = 'None';
+            document.getElementById('player1MoveDisplay').textContent = 'None';
+            document.getElementById('player2MoveDisplay').textContent = 'None';
+
+            // Remove selected class from all color buttons
+            document.querySelectorAll('.color-palette button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            document.querySelector('#player1Card .action-buttons .confirm-btn').disabled = false;
+            document.querySelector('#player2Card .action-buttons .confirm-btn').disabled = false;
+
+            currentPlayerTurn = 1; // Player 1 always starts after reset
+            updateCurrentPlayerIndicator();
+            drawBoard(); // Redraw the board to reflect the reset state
+        }
+
+
+        function startNewRound() {
+            // Reset confirmation status and selected moves for both players
+            players[1].selectedMove = null;
+            players[1].hasConfirmed = false;
+            players[2].selectedMove = null;
+            players[2].hasConfirmed = false;
+
+            // Reset global confirmation flags for the new round
+            player1Confirmed = false;
+            player2Confirmed = false;
+
+            document.getElementById('player1MoveDisplay').textContent = 'None';
+            document.getElementById('player2MoveDisplay').textContent = 'None';
+
+            document.querySelector('#player1Card .action-buttons .confirm-btn').disabled = false;
+            document.querySelector('#player2Card .action-buttons .confirm-btn').disabled = false;
+
+            // Randomly decide who starts selecting first in the new round
+            currentPlayerTurn = Math.random() < 0.5 ? 1 : 2;
+            updateCurrentPlayerIndicator();
+        }
+
+        // Modified resetGame function to show confirmation message first
+        function resetGameConfirmation() {
+            showMessageBox("Are you sure you want to reset the game? This will clear all progress.", performGameReset);
+        }
+
+        // Initial setup
+        window.onload = function() {
+            initializePolygons();
+            drawBoard();
+            updateCurrentPlayerIndicator();
+        };
+
+        // Handle canvas resizing for responsiveness (optional, but good practice)
+        window.addEventListener('resize', () => {
+            drawBoard();
+        });
+
+    </script>
+</body>
+</html>
